@@ -117,7 +117,7 @@ app.post("/create-user", async (req, res) => {
 
 app.get("/", async (req, res) => {
   let score = await Score.find();
-  res.json({ body: score });
+  res.json({ body: 'hello' });
 });
 
 module.exports = app;
