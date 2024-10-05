@@ -12,6 +12,7 @@ const jwt = require("jsonwebtoken");
 const Score = require("./model/score.model");
 const Project = require("./model/project.model");
 const User = require("./model/user.model");
+const Room = require("./model/room.model");
 
 const app = express();
 app.use(cors());
@@ -122,7 +123,66 @@ app.get("/", async (req, res) => {
 
 app.get("/exam-management", async (req, res) => {
   let score = await Score.find();
-  console.log('correct');
   res.json({ body: score });
 });
+
+app.get("/project-students", async (req, res) => {
+  let project = await Project.find();
+  res.json({ body: project });
+});
+
+app.post("/create-room-management", async (req, res) => {
+  try {
+    const { roomExam, nameExam, dateExam, referees, projects } = req.body;
+    const room = await Room.create({
+      roomExam,
+      nameExam,
+      dateExam,
+      referees,
+      projects,
+    });
+
+    
+    for (const project of projects) {
+      const { projectId } = project;
+      const scoreUpdate = {
+        roomExam,
+        dateExam,
+        referee: referees.map(({ keyLecturer, nameLecturer, roleLecturer }) => ({
+          keyLecturer,
+          nameLecturer,
+          roleLecturer,
+          score: 0, 
+        })),
+        limitReferee: referees.length,
+        totalScore: 0,  
+        limitScore: 100, 
+        activeStatus: 1,  
+        resultStatus: 0, 
+      };
+      const examField = `CSB${nameExam.split("CSB")[1]}`; 
+      await Score.findOneAndUpdate(
+        { projectId },
+        {
+          $set: {
+            [`${examField}.roomExam`]: scoreUpdate.roomExam,
+            [`${examField}.dateExam`]: scoreUpdate.dateExam,
+            [`${examField}.referee`]: scoreUpdate.referee,
+            [`${examField}.limitReferee`]: scoreUpdate.limitReferee,
+            [`${examField}.totalScore`]: scoreUpdate.totalScore,
+            [`${examField}.limitScore`]: scoreUpdate.limitScore,
+            [`${examField}.activeStatus`]: scoreUpdate.activeStatus,
+            [`${examField}.resultStatus`]: scoreUpdate.resultStatus,
+          },
+        },
+        { new: true, upsert: true } 
+      );
+    }
+    res.json({ message: "Room management and score updated successfully!" });
+  } catch (error) {
+    console.error("Error in creating room management:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
 module.exports = app;
