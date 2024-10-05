@@ -120,4 +120,9 @@ app.get("/", async (req, res) => {
   res.json({ body: 'hello world' });
 });
 
+app.get("/exam-management", async (req, res) => {
+  let score = await Score.find();
+  console.log('correct');
+  res.json({ body: score });
+});
 module.exports = app;
