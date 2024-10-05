@@ -13,6 +13,8 @@ const Score = require("./model/score.model");
 const Project = require("./model/project.model");
 const User = require("./model/user.model");
 const Room = require("./model/room.model");
+const Anouncement = require("./model/anouncement.model");
+const e = require("express");
 
 const app = express();
 app.use(cors());
@@ -22,6 +24,14 @@ app.use(bodyParser.urlencoded({ extended: true, limit: "5mb" }));
 
 app.use(express.json());
 
+app.get("/", async (req, res) => {
+  let score = await Score.find();
+  res.json({ body: "hello TNP" });
+});
+
+
+
+// สร้าง CSB01 - CSB04
 app.post("/create-form", async (req, res) => {
   const {
     projectName,
@@ -46,6 +56,12 @@ app.post("/create-form", async (req, res) => {
     scoreId: "",
   });
 
+  let calActiveStatus = lecturer.length + student.length; 
+  let activeArray = [];
+  calActiveStatus.map((item) => {
+    activeArray.push(0);
+  })
+
   const scores = await Score.create({
     projectId: projects._id,
     CSB01: {
@@ -55,7 +71,7 @@ app.post("/create-form", async (req, res) => {
       limitReferee: 0,
       totalScore: 0,
       limitScore: 0,
-      activeStatus: 0,
+      activeStatus: activeArray,
       resultStatus: 0,
     },
     CSB02: {
@@ -65,7 +81,7 @@ app.post("/create-form", async (req, res) => {
       limitReferee: 0,
       totalScore: 0,
       limitScore: 0,
-      activeStatus: 0,
+      activeStatus: activeArray,
       resultStatus: 0,
     },
     CSB03: {
@@ -82,7 +98,7 @@ app.post("/create-form", async (req, res) => {
           status: 0,
         },
       ],
-      activeStatus: 0,
+      activeStatus: activeArray,
       resultStatus: 0,
     },
     CSB04: {
@@ -92,7 +108,7 @@ app.post("/create-form", async (req, res) => {
       limitReferee: 0,
       totalScore: 0,
       limitScore: 0,
-      activeStatus: 0,
+      activeStatus: activeArray,
       resultStatus: 0,
     },
   });
@@ -102,35 +118,9 @@ app.post("/create-form", async (req, res) => {
   res.json({ body: { score: scores, project: projects } });
 });
 
-app.post("/create-user", async (req, res) => {
-  const { username, displayname, firstname, lastname, account_type } = req.body;
-  console.log(req.body);
-  const user = await User.create({
-    username,
-    displayname,
-    firstname,
-    lastname,
-    account_type,
-  });
 
-  res.json({ body: user });
-});
 
-app.get("/", async (req, res) => {
-  let score = await Score.find();
-  res.json({ body: 'hello world' });
-});
-
-app.get("/exam-management", async (req, res) => {
-  let score = await Score.find();
-  res.json({ body: score });
-});
-
-app.get("/project-students", async (req, res) => {
-  let project = await Project.find();
-  res.json({ body: project });
-});
-
+// สร้างห้องสอบ
 app.post("/create-room-management", async (req, res) => {
   try {
     const { roomExam, nameExam, dateExam, referees, projects } = req.body;
@@ -142,25 +132,25 @@ app.post("/create-room-management", async (req, res) => {
       projects,
     });
 
-    
     for (const project of projects) {
       const { projectId } = project;
       const scoreUpdate = {
         roomExam,
         dateExam,
-        referee: referees.map(({ keyLecturer, nameLecturer, roleLecturer }) => ({
-          keyLecturer,
-          nameLecturer,
-          roleLecturer,
-          score: 0, 
-        })),
+        referee: referees.map(
+          ({ keyLecturer, nameLecturer, roleLecturer }) => ({
+            keyLecturer,
+            nameLecturer,
+            roleLecturer,
+            score: 0,
+          })
+        ),
         limitReferee: referees.length,
-        totalScore: 0,  
-        limitScore: 100, 
-        activeStatus: 1,  
-        resultStatus: 0, 
+        totalScore: 0,
+        limitScore: 100,
+        resultStatus: 0,
       };
-      const examField = `CSB${nameExam.split("CSB")[1]}`; 
+      const examField = `CSB${nameExam.split("CSB")[1]}`;
       await Score.findOneAndUpdate(
         { projectId },
         {
@@ -175,7 +165,7 @@ app.post("/create-room-management", async (req, res) => {
             [`${examField}.resultStatus`]: scoreUpdate.resultStatus,
           },
         },
-        { new: true, upsert: true } 
+        { new: true, upsert: true }
       );
     }
     res.json({ message: "Room management and score updated successfully!" });
@@ -184,5 +174,83 @@ app.post("/create-room-management", async (req, res) => {
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
+app.get("/lecturers", async (req, res) => {
+  const lecturers = await User.find({ account_type: "personal" });
+  console.log("lecturers");
+  // res.json({ body: lecturers.map(({ _id }) => ({ keyLecturer: _id.username, nameLecturer: _id.displayname })) });
+  res.json({
+    body: lecturers.map(({ _id, username, displayname }) => ({
+      keyLecturer: username,
+      nameLecturer: displayname,
+    })),
+  });
+});
+app.get("/project-students", async (req, res) => {
+  let project = await Project.find();
+  res.json({ body: project });
+});
+
+
+
+// สร้าง sp1-sp2
+app.post('/students', async (req, res) => {
+  try {
+    const { projectValidate } = req.body.data;
+    const students = await User.find({ account_type: 'students' });
+    console.log(req.body.data);
+    let studentIds = students.map(({ username, projectStatus }) => {
+      if(projectStatus[0] == projectValidate[0] && projectStatus[1] == projectValidate[1]){
+        return username.substring(1); 
+      } 
+    });
+    let projects = await Project.find({
+      'student.studentId': { $in: studentIds }
+    });
+    res.json({ body: projects });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+
+
+// สร้างการประกาศ
+app.post("/create-anouncement", async (req, res) => {
+  const { examName, examStartDate, examEndDate } = req.body;
+  const anouncement = await Anouncement.create({
+    examName,
+    examStartDate,
+    examEndDate,
+  });
+  res.json({ body: anouncement });
+});
+
+
+app.get("/sumary-room", async (req, res) => {
+  let room = await Room.find();
+  res.json({ body: room });
+});
+
+
+// app.post("/create-user", async (req, res) => {
+//   const { username, displayname, firstname, lastname, account_type } = req.body;
+//   console.log(req.body);
+//   const user = await User.create({
+//     username,
+//     displayname,
+//     firstname,
+//     lastname,
+//     account_type,
+//   });
+
+//   res.json({ body: user });
+// });
+
+// app.get("/exam-management", async (req, res) => {
+//   let score = await Score.find();
+//   res.json({ body: score });
+// });
+
 
 module.exports = app;

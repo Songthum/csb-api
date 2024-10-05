@@ -14,7 +14,7 @@ const scoreSchema = new mongoose.Schema({
         limitReferee: Number,
         totalScore: Number,
         limitScore: Number,
-        activeStatus: Number,
+        activeStatus: [Number],
         resultStatus: Number,
     },
     CSB02: {
@@ -29,7 +29,7 @@ const scoreSchema = new mongoose.Schema({
         limitReferee: Number,
         totalScore: Number,
         limitScore: Number,
-        activeStatus: Number,
+        activeStatus: [Number],
         resultStatus: Number,
     },
     CSB03: {
@@ -43,7 +43,7 @@ const scoreSchema = new mongoose.Schema({
             nameLecturer: String,
             roleLecturer: String,
         }],
-        activeStatus: Number,
+        activeStatus: [Number],
         resultStatus: Number,
     },
     CSB04: {
@@ -58,7 +58,7 @@ const scoreSchema = new mongoose.Schema({
         limitReferee: Number,
         totalScore: Number,
         limitScore: Number,
-        activeStatus: Number,
+        activeStatus: [Number],
         resultStatus: Number,
     },
 });
